@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+    <style type="text/css">
+      .table>tbody>tr>td, .table>tbody>tr>th, .table>tfoot>tr>td, .table>tfoot>tr>th, .table>thead>tr>td, .table>thead>tr>th { line-height: 1; }
+      .bg-r { background-color:rgba(255, 0, 0, 0.25); }
+      .bg-v { background-color:rgba(0, 255, 0, 0.25); }
+      .bg-a { background-color:rgba(255, 255, 0, 0.25); }
+      .th-ieci {  background-color: rgb(0, 118, 6); color: #FFF; vertical-align: middle !important;   font-size: 1.2rem;}
+    </style>
+  </head>
+  <body>
+    <h1><%= title %></h1>
+    <p><%= subtitulo %></p>
+    <div class="container">
+      <div class="table-responsive">
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th class="col-md-2 col-xs-1 th-ieci text-left">IP</th>
+              <th class="col-md-1 col-xs-1 th-ieci text-left">Tipo</th>
+              <th class="col-md-2 col-xs-1 th-ieci text-left">Estacion</th>
+              <th class="col-md-1 col-xs-1 th-ieci text-center">%CPU</th>
+              <th class="col-md-1 col-xs-1 th-ieci text-center">%MEM</th>
+              <th class="col-md-1 col-xs-1 th-ieci text-center">%CPU APP</th>
+              <th class="col-md-1 col-xs-1 th-ieci text-center">%MEM APP</th>
+              <th class="col-md-1 col-xs-1 th-ieci text-center">Root FS</th>
+              <th class="col-md-1 col-xs-1 th-ieci text-center">Carga 1m</th>
+              <th class="col-md-1 col-xs-1 th-ieci text-center">Carga 5m</th>
+              <th class="col-md-1 col-xs-1 th-ieci text-center">Carga 15m</th>
+            </tr> text-center
+          </thead>
+          <tbody class="tbody" style="font-size: 1.1rem;"></tbody>
+        </table>
+      </div>
+      <div style="font-size: 0.9rem;text-align: right;font-family: sans-serif;">    
+        <strong>Autor:<strong> Mariano Jorge Obarrio Miles
+      </div>
+    </div>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    var equipos=JSON.parse('<%-JSON.stringify(equipos)%>');
+
+    var socket = io('http://localhost:3000');
+    socket.on('update', function (data) {
+        var memusage = ((parseFloat(data.memfree)+parseFloat(data.cached))/parseFloat(data.memtotal)).toFixed(2);
+        var cpuusage = parseFloat(data.cpuusage).toFixed(2);
+        var appcpuusage = parseFloat(data.appcpu).toFixed(2);
+        var appmemusage = parseFloat(data.appmem).toFixed(2);
+        var id = data.ipaddr.toString().replace(/\./g,"-");
+        $(".cpu-bt-"+id).html(cpuusage+"%");
+        $(".mem-bt-"+id).html(memusage+"%");
+        $(".rootfs-"+id).html(data.rootfsusage);
+        $(".load1-"+id).html(data.load1);
+        $(".load5-"+id).html(data.load5);
+        $(".load15-"+id).html(data.load15);
+        $(".cpu-app-"+id).html(appcpuusage);
+        $(".mem-app-"+id).html(appmemusage);
+
+        /* Pinta RootFSUsage*/
+        if(parseFloat(data.rootfsusage) >= 95) $(".rootfs-"+id).addClass("bg-r");
+        else if(parseFloat(data.rootfsusage) >= 90) $(".rootfs-"+id).addClass("bg-a");
+        else $(".rootfs-"+id).addClass("bg-v");
+
+        /* Pinta CPUUsage*/
+        if(cpuusage >= 90) $(".cpu-bt-"+id).addClass("bg-r");
+        else if(cpuusage >= 50) $(".cpu-bt-"+id).addClass("bg-a");
+        else $(".cpu-bt-"+id).addClass("bg-v");
+
+        /* Pinta MEMUsage*/
+        if(memusage >= 80) $(".mem-bt-"+id).addClass("bg-r");
+        else if(memusage >= 50) $(".mem-bt-"+id).addClass("bg-a");
+        else $(".mem-bt-"+id).addClass("bg-v");
+
+        /* Pinta MEMUsage*/
+        if(appcpuusage >= 80) $(".cpu-app-"+id).addClass("bg-r");
+        else if(appcpuusage >= 50) $(".cpu-app-"+id).addClass("bg-a");
+        else $(".cpu-app-"+id).addClass("bg-v");
+
+        /* Pinta MEMUsage*/
+        if(appmemusage >= 80) $(".mem-app-"+id).addClass("bg-r");
+        else if(appmemusage >= 50) $(".mem-app-"+id).addClass("bg-a");
+        else $(".mem-app-"+id).addClass("bg-v");
+    });
+
+    $(document).ready(function(){
+      $.each(equipos, function(i, val) {
+        var id = i.toString().replace(/\./g,"-");
+        $(".tbody").append('<tr class="tr-'+id+'"><td class="ip-'+id+'" title="'+equipos[i].vname+'">'+i+'</td><td class="tipo-'+id+'">'+equipos[i].tipo+'</td><td class="estacion-'+id+'">'+equipos[i].estacion+'</td><td class="cpu-bt-'+id+' text-center"></td><td class="mem-bt-'+id+' text-center"></td><td class="cpu-app-'+id+' text-center"></td><td class="mem-app-'+id+' text-center"></td><td class="rootfs-'+id+' text-center"></td><td class="load1-'+id+' text-center"></td><td class="load5-'+id+' text-center"></td><td class="load15-'+id+' text-center"></td></tr>');
+      });
+    });    
+  </script>  
+  </body>
+</html>
+
