@@ -4,6 +4,9 @@
 * [Run](#run)
 
 ### Install
+```javascript
+T:\www\nodejs\monitor>npm install
+```
 
 ### Run
 ```javascript
