@@ -64,17 +64,28 @@ var SSHConn = function(server) {
         Logger.debug("Creando conexion con " + server.host + ":" + server.port);
         var Client = require('ssh2').Client;
         var conn = new Client();
-        conn.on('ready', function() {
+        conn.on('error', function(e) { 
+            if (Logger.info) Logger.error("SSHConn[" + server.host + ":" + server.port + "] Connection error MSG: ["+e+"]"); 
+        }).on('ready', function() {
+          if (Logger.debug) Logger.debug(self.logMessage('Connection established'));
           var result = '';
-          conn.exec(exec_str, function(err, stream) {
-            if (err) throw err;
+          conn.exec(exec_str, function(error, stream) {
+            if (error) {
+                if (Logger.debug) Logger.error(self.logMessage('Connection error '+error));
+                throw error;
+            }
             stream.on('close', function(code, signal) {
-                if (Logger.debug) Logger.debug(self.logMessage('Connection close'));
+                if (Logger.debug) Logger.debug(self.logMessage('Connection close '));
                 conn.end();
-            }).on('error', function(e) { 
-                if (Logger.error) Logger.error(self.logMessage('Connection error '+e));
+            }).on('close', function(had_error) {
+                if (had_error)         Logger.error(self.logMessage('Connection closed due to error'));
+                else if (Logger.debug) Logger.debug(self.logMessage('Connection closed cleanly'));
             }).on('end', function()    { 
-                if (Logger.debug) Logger.debug(self.logMessage('Connection ended'));
+                if (Logger.debug) Logger.debug(self.logMessage('Connection ended '));
+                if(result === '' || result === 'undefined') {
+                    if (Logger.debug) Logger.error(self.logMessage('Connection ended empty message.'));
+                    return(false); 
+                }
                 var ret = JSON.parse(result);
                 ret.vname = config.equipos[server.host].vname || '';
                 ret.tipo = config.equipos[server.host].tipo || '';
@@ -87,9 +98,10 @@ var SSHConn = function(server) {
         }).connect({
             host: server.host,
             port: server.port,
+            readyTimeout: 99999,
             username: config.username,
             password: config.password,
-            privateKey: server.privateKey
+            privateKey: (config.privateKey ? require('fs').readFileSync(config.privateKey) : "")
         });
         return(this._client);
     };
